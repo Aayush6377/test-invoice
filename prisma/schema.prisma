@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id String @id @default(uuid())
+  name String?
+  email String? @unique
+  emailVerified DateTime?
+  password String?
+  image String?
+  
+  companyName String?
+  companyAddress String?
+  city String?
+  state String?
+  zip String?
+  country String? @default("India")
+  logoUrl String?
+
+  accounts Account[]
+  paymentDetails PaymentDetails?
+  clients Client[]
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id String @id @default(uuid())
+  userId String
+  type String
+  provider String
+  providerAccountId String
+  refresh_token String? @db.Text
+  access_token String? @db.Text
+  expires_at Int?
+  token_type String?
+  scope String?
+  id_token String? @db.Text
+  session_state String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model PaymentDetails {
+  id String @id @default(uuid())
+  userId String @unique
+  upiId String? 
+  bankName String?
+  accountNumber String?
+  ifscCode String?
+  accountHolderName String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+model Client {
+  id String @id @default(uuid())
+  userId String
+  email String?
+  companyName String
+  address String?
+  city String?
+  state String?
+  zip String?
+  country String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices Invoice[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id String @id @default(uuid())
+  userId String
+  clientId String?
+  title String @default("INVOICE")
+  
+  paymentUpiId String?
+  includeQrCode Boolean @default(false)
+
+  invoiceNumber String
+  status InvoiceStatus @default(DRAFT) 
+  issueDate DateTime @default(now())
+  dueDate DateTime
+
+  senderLogoUrl String?
+  senderName String
+  senderAddress String?
+  senderCity String?
+  senderState String?
+  senderZip String?
+  senderCountry String?
+
+  clientName String
+  clientAddress String?
+  clientCity String?
+  clientState String?
+  clientZip String?
+  clientCountry String?
+
+  subTotal Float
+  taxTotal Float
+  totalAmount Float
+
+  notesTitle String @default("Notes")
+  notes String? @db.Text
+  termsTitle String @default("Terms & Conditions")
+  terms String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items InvoiceItem[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, invoiceNumber])
+}
+
+model InvoiceItem {
+  id String @id @default(uuid())
+  invoiceId String
+  description String
+  quantity Int @default(1)
+  rate Float
+  taxRate Float @default(0)
+  amount Float
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  @@index([invoiceId])
+}
+
+enum Otptype {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+model Otp {
+  id String @id @default(uuid())
+  email String
+  code String
+  type Otptype
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, type])
+}
