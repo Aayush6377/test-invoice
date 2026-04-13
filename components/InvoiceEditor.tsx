@@ -218,51 +218,8 @@ export default function InvoiceForm({ initialData, mode, invoiceId }: InvoiceFor
   };
 
   const handleEmail = async () => {
-    if (!invoiceRef.current) return;
-    
-    const isConfirm = confirm(`Do you want to generate and email this invoice to ${invoice.clientName}?`);
-    if (!isConfirm) return;
-
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF } = await import("jspdf");
-
-      const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-      
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      const pdfBlob = pdf.output("blob");
-
-      const formData = new FormData();
-      formData.append("pdf", pdfBlob, `${invoice.invoiceNumber}.pdf`);
-      formData.append("toEmail", "client@example.com");
-      formData.append("clientName", invoice.clientName);
-      formData.append("invoiceNumber", invoice.invoiceNumber);
-
-      const res = await fetch("/api/user/invoices/send", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        alert("Email sent successfully to the client!");
-      } else {
-        alert("Failed to send email: " + result.message);
-      }
-    } catch {
-      alert("An error occurred while preparing the email.");
-    }
-  };
+    alert("Email send test");
+  }
 
   const inputStyles = "bg-transparent hover:bg-slate-50 focus:bg-blue-50 hover:outline hover:outline-1 hover:outline-slate-300 focus:outline focus:outline-2 focus:outline-blue-500/40 rounded transition-all px-1 -mx-1 w-full";
 

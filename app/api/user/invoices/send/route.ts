@@ -15,8 +15,12 @@ export async function POST(req: Request) {
     const invoiceNumber = formData.get("invoiceNumber") as string | "Invoice";
     const pdfFile = formData.get("pdf") as File | null;
 
-    if (!toEmail || !pdfFile) {
-      return NextResponse.json( { success: false, message: "Recipient email and PDF file are required." }, { status: 400 } );
+    if (!toEmail || toEmail === "null" || toEmail.trim() === "") {
+      return NextResponse.json( { success: false, message: "Recipient email is required." }, { status: 400 } );
+    }
+
+    if (!pdfFile) {
+      return NextResponse.json( { success: false, message: "PDF file is required." }, { status: 400 } );
     }
 
     const bytes = await pdfFile.arrayBuffer();
