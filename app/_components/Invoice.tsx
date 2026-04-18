@@ -201,28 +201,38 @@ export default function InvoiceLayout() {
       const { domToJpeg } = await import("modern-screenshot");
       const { jsPDF } = await import("jspdf");
 
-      // Temporarily store original styles to prevent the screenshot from cropping
       const element = invoiceRef.current;
+      
+      const originalShadow = element.style.boxShadow;
+      const originalBorder = element.style.border;
+      const originalRadius = element.style.borderRadius;
+      
+      element.style.boxShadow = 'none';
+      element.style.border = 'none';
+      element.style.borderRadius = '0';
       
       const dataUrl = await domToJpeg(element, {
         scale: 2,
         backgroundColor: '#ffffff',
-        width: element.offsetWidth,
-        height: element.offsetHeight,
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left'
-        },
+        width: element.scrollWidth,
+        height: element.scrollHeight,
         filter: (node) => !(node instanceof HTMLElement && node.classList.contains('print:hidden'))
       });
 
+      element.style.boxShadow = originalShadow;
+      element.style.border = originalBorder;
+      element.style.borderRadius = originalRadius;
+
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(dataUrl);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      // Add slight padding to match the printed PDF look
-      pdf.addImage(dataUrl, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+      const margin = 10;
+      const pdfPageWidth = pdf.internal.pageSize.getWidth();
+      const printWidth = pdfPageWidth - (margin * 2);
+      
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const printHeight = (imgProps.height * printWidth) / imgProps.width;
+      
+      pdf.addImage(dataUrl, "JPEG", margin, margin, printWidth, printHeight, undefined, 'FAST');
       const pdfBlob = pdf.output("blob");
 
       const formData = new FormData();
