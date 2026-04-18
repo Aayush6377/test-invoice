@@ -7,8 +7,7 @@ export default async function proxy(req: NextRequest) {
   const isProtectedRoute = nextUrl.pathname.startsWith("/user");
   const isAuthRoute =
     nextUrl.pathname.startsWith("/login") ||
-    nextUrl.pathname.startsWith("/register") ||
-    nextUrl.pathname === "/";
+    nextUrl.pathname.startsWith("/register");
 
   if (!isLoggedIn && isProtectedRoute) {
     return NextResponse.redirect(new URL("/login", nextUrl));
@@ -22,5 +21,5 @@ export default async function proxy(req: NextRequest) {
 };
 
 export const config = {
-  matcher: ["/user/:path*", "/login", "/register", "/"],
+  matcher: ["/user/:path*", "/login", "/register"],
 };

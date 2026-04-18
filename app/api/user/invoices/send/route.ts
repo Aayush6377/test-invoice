@@ -5,35 +5,35 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { user, error } = await getUser();
-    if (error || !user) {
-      return NextResponse.json({ success: false, message: error || "Unauthorized" }, { status: 401 });
-    }
+    const { user } = await getUser();
 
     const formData = await req.formData();
     const toEmail = formData.get("toEmail") as string | null;
     const clientName = formData.get("clientName") as string | "Client";
     const invoiceNumber = formData.get("invoiceNumber") as string | "Invoice";
+    const senderNameStr = formData.get("senderName") as string | null;
     const pdfFile = formData.get("pdf") as File | null;
-    const invoiceId = formData.get("invoiceId") as string | null; // optional to update invoice status
+    const invoiceId = formData.get("invoiceId") as string | null;
 
     if (!toEmail || toEmail === "null" || toEmail.trim() === "") {
-      return NextResponse.json( { success: false, message: "Recipient email is required." }, { status: 400 } );
+      return NextResponse.json({ success: false, message: "Recipient email is required." }, { status: 400 });
     }
 
     if (!pdfFile) {
-      return NextResponse.json( { success: false, message: "PDF file is required." }, { status: 400 } );
+      return NextResponse.json({ success: false, message: "PDF file is required." }, { status: 400 });
     }
 
     const bytes = await pdfFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    await transporter.sendMail({
-      from: `"${user.companyName || user.name}" <${process.env.EMAIL_USER}>`,
-      replyTo: `"${user.companyName || user.name}" <${user.email}>`,
+    const senderName = user?.companyName || user?.name || senderNameStr || "Invoice Generator";
+    const replyToEmail = user?.email || undefined;
+
+    const mailOptions: any = {
+      from: `"${senderName}" <${process.env.EMAIL_USER}>`,
       to: toEmail,
-      subject: `Invoice ${invoiceNumber} from ${user.companyName || user.name}`,
-      text: `Hello ${clientName},\n\nPlease find attached your invoice (${invoiceNumber}).\n\nThank you for your business!\n\nBest regards,\n${user.companyName || user.name}`,
+      subject: `Invoice ${invoiceNumber} from ${senderName}`,
+      text: `Hello ${clientName},\n\nPlease find attached your invoice (${invoiceNumber}).\n\nThank you for your business!\n\nBest regards,\n${senderName}`,
       attachments: [
         {
           filename: `Invoice_${invoiceNumber}.pdf`,
@@ -41,13 +41,23 @@ export async function POST(req: Request) {
           contentType: "application/pdf",
         },
       ],
-    });
+    };
 
-    if (invoiceId) {
-      await prisma.invoice.update({
-        where: { id: invoiceId, userId: user.id }, 
-        data: { status: "SENT" }
-      });
+    if (replyToEmail) {
+      mailOptions.replyTo = `"${senderName}" <${replyToEmail}>`;
+    }
+
+    await transporter.sendMail(mailOptions);
+
+    if (user && invoiceId) {
+      try {
+        await prisma.invoice.update({
+          where: { id: invoiceId, userId: user.id }, 
+          data: { status: "SENT" }
+        });
+      } catch (dbError) {
+        console.warn("Failed to update invoice status in DB:", dbError);
+      }
     }
 
     return NextResponse.json({ success: true, message: "Invoice sent successfully" }, { status: 200 });
